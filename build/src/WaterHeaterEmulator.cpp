@@ -23,21 +23,20 @@ WaterHeaterEmulator::WaterHeaterEmulator (tsu::config_map &config, unsigned int 
 	//std::binomial_distribution<> d(4,0.5);
 	//int size;
 	//size = d(gen) +1;
+	
 	float rn = float(rand())/RAND_MAX;
 	int size;
-	//Household size data from 2017 US Census
 	if (rn <= 0.133) {
 		size = 1;
-	} else if (rn <= .396) {
+	} else if (rn <= 0.396) {
 		size = 2;
-	} else if (rn <= .792) {
+	} else if (rn <= 0.792) {
 		size = 3;
-	} else if (rn <= .957) {
+	} else if (rn <= 0.957) {
 		size = 4;
 	} else {
 		size = 5;
 	}
-	
 
 	//Read schedule and shuffle volumes column
 	if (size == 1) {
@@ -51,6 +50,7 @@ WaterHeaterEmulator::WaterHeaterEmulator (tsu::config_map &config, unsigned int 
 	} else if (size == 5) {
 		schedule_ = tsu::FileToMatrix("../data/5bed.csv", ',' ,2);
 	}
+
 	
 	//Normal distribution of event times and volumes
 	time_t utc = time(0);
@@ -94,6 +94,9 @@ WaterHeaterEmulator::WaterHeaterEmulator (tsu::config_map &config, unsigned int 
 	log_inc_ = stoul(config["DER"]["log_inc"]);
 	log_path_ = config["DER"]["log_path"];
 	SetIdleLosses (stoul(config["EWH"]["idle_losses"]));
+	WaterHeaterEmulator::SetBypassImportWatts (0);
+	WaterHeaterEmulator::SetBypassImportPower (0);
+	WaterHeaterEmulator::SetNormalImportPower (0);
 	SetImportPower (0);
 	SetImportWatts (0);
 	SetDeltaEnergy(0);
@@ -128,16 +131,20 @@ WaterHeaterEmulator::~WaterHeaterEmulator () {};
 
 void WaterHeaterEmulator::Loop (float delta_time) {
 	float import_energy = WaterHeaterEmulator::GetImportEnergyFloat ();
-	if (import_energy > 900) {
-		SetImportPower (GetRatedImportPower ());
+	if (import_energy > 2025) {
+		WaterHeaterEmulator::SetBypassImportWatts (GetRatedImportPower ());
+	} else if (import_energy < 1725 && GetBypassImportPower () != 0){
+		WaterHeaterEmulator::SetBypassImportWatts (0);
+		WaterHeaterEmulator::SetBypassImportPower (0);
 	}
-	
-	if (GetImportPower () > 0 && import_energy > 0) {
+
+	if ((GetImportWatts () > 0 || WaterHeaterEmulator::GetBypassImportWatts () > 0) && import_energy > 300) {
+		WaterHeaterEmulator::ImportPower (delta_time);
+	} else if (GetImportWatts () > 0 && GetImportPower () > 0 && import_energy > 0) {
 		WaterHeaterEmulator::ImportPower (delta_time);
 	} else {
 		WaterHeaterEmulator::IdleLoss (delta_time);
 	}
-
 	WaterHeaterEmulator::Usage ();
 	WaterHeaterEmulator::UsageLoss (delta_time);
 	WaterHeaterEmulator::Log ();
@@ -148,12 +155,26 @@ void WaterHeaterEmulator::ImportPower (float delta_time) {
 	float hours = seconds / (60*60);
 	float import_energy = WaterHeaterEmulator::GetImportEnergyFloat ();
 	float import_power = GetImportPower ();
+	float import_watts = GetImportWatts ();
 	float delta_energy;
 
-	if (import_power > 0) {
-		delta_energy = import_power * hours;
+	if (WaterHeaterEmulator::GetBypassImportWatts () > 0) {
+		if (WaterHeaterEmulator::GetBypassImportPower () < WaterHeaterEmulator::GetBypassImportWatts ()) {
+			WaterHeaterEmulator::SetBypassImportPower (WaterHeaterEmulator::GetBypassImportWatts ());
+		}
+		delta_energy = WaterHeaterEmulator::GetBypassImportPower () * hours;
 		WaterHeaterEmulator::SetImportEnergyFloat (import_energy - delta_energy);
 		SetImportEnergy (import_energy - delta_energy);
+	} else {
+		if (import_power < import_watts && import_energy > 300) {
+			SetImportPower (GetRatedImportPower ());
+		}
+		delta_energy = GetImportPower () * hours;
+		WaterHeaterEmulator::SetImportEnergyFloat (import_energy - delta_energy);
+		SetImportEnergy (import_energy - delta_energy);
+	}
+	if (WaterHeaterEmulator::GetBypassImportPower () > 0) {
+		SetImportPower (GetRatedImportPower ());
 	}
 };
 
@@ -164,6 +185,7 @@ void WaterHeaterEmulator::IdleLoss (float delta_time) {
 	float loss_factor = 1 - import_energy/GetRatedImportEnergy ();
 	float energy_loss = GetIdleLosses () * hours * loss_factor;
 	SetImportPower (0);
+	//WaterHeaterEmulator::SetNormalImportPower (0);
 	WaterHeaterEmulator::SetImportEnergyFloat (import_energy + energy_loss);
 	SetImportEnergy(import_energy + energy_loss);
 };
@@ -183,6 +205,7 @@ void WaterHeaterEmulator::Usage () {
 			import_energy = WaterHeaterEmulator::GetImportEnergyFloat ();
 			tank_temp = temp_setpoint_ - import_energy/100;
 			delta_energy = stof(schedule_[i][1])*(tank_temp - mains_temp_)*2.44;
+			//SetImportEnergy(import_energy + delta_energy);
 			WaterHeaterEmulator::SetDeltaEnergy (old_delta_energy + delta_energy);
 		}
 	}
@@ -216,7 +239,7 @@ void WaterHeaterEmulator::Log () {
 			<< GetImportWatts () << "\t"
 			<< GetImportPower () << "\t"
 			<< GetImportEnergy () << "\t"
-			<< GetImportPower () << "\t"
+			<< GetBypassImportPower () << "\t"
 			<< WaterHeaterEmulator::GetImportEnergyFloat () << "\t";
 		last_utc_ = utc;
 	}
@@ -225,9 +248,36 @@ void WaterHeaterEmulator::Log () {
 void WaterHeaterEmulator::Display () {
 	std::cout
 		<< "Import Power:\t" << GetImportPower () << "\twatts\n"
+		<< "Bypass Power:\t" << WaterHeaterEmulator::GetBypassImportPower () << "\twatts\n"
 		<< "Import Control:\t" << GetImportWatts () << "\twatts\n"
 		<< "Import Energy:\t" << WaterHeaterEmulator::GetImportEnergyFloat () << "\twatt-hours\n"
 		<< std::endl;
+};
+
+float WaterHeaterEmulator::GetBypassImportPower () {
+	return bypass_import_power_;
+};
+
+unsigned int WaterHeaterEmulator::GetBypassImportWatts () {
+	return bypass_import_watts_;
+};
+
+void WaterHeaterEmulator::SetBypassImportPower (float power) {
+	if (power > WaterHeaterEmulator::GetBypassImportWatts ()) {
+		bypass_import_power_ = GetBypassImportWatts ();
+	} else if (power <= 0) {
+		bypass_import_power_ = 0;
+	} else {
+		bypass_import_power_ = power;
+	}
+};
+
+void WaterHeaterEmulator::SetBypassImportWatts (float watts) {
+	if (watts > GetRatedImportPower ()) {
+		bypass_import_watts_ = GetRatedImportPower ();
+	} else {
+		bypass_import_watts_ = watts;
+	}
 };
 
 void WaterHeaterEmulator::SetDeltaEnergy (float energy) {
@@ -236,6 +286,14 @@ void WaterHeaterEmulator::SetDeltaEnergy (float energy) {
 
 float WaterHeaterEmulator::GetDeltaEnergy () {
 	return delta_energy_;
+};
+
+float WaterHeaterEmulator::GetNormalImportPower () {
+	return normal_import_power_;
+};
+
+void WaterHeaterEmulator::SetNormalImportPower (float power) {
+	normal_import_power_ = power;
 };
 
 float WaterHeaterEmulator::GetImportEnergyFloat () {
