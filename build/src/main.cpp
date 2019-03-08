@@ -37,6 +37,7 @@
 #include <vector>
 #include <map>
 #include "include/DistributedEnergyResource.h"
+#include "include/WaterHeaterEmulator.h"
 #include "include/CommandLineInterface.h"
 #include "include/Operator.h"
 #include "include/SmartGridDevice.h"
@@ -59,6 +60,7 @@ static void ProgramHelp (const string& name) {
     	"\t[] means it has a default value\n"
     	"\t -h \t help\n"
     	"\t -c \t configuration filename" 
+	"\t -i \t ID number"
 		"\t -o \t enable operator"  << endl;
 }  // end Program Help
 
@@ -71,6 +73,7 @@ static std::map <std::string, std::string> ArgumentParser (int argc,
 
     // parse tokens
     map <string, string> parameters;
+    parameters["ID"] = 1;
     string token, argument;
 
     for (int i = 1; i < argc; i = i+2){
@@ -96,15 +99,13 @@ static std::map <std::string, std::string> ArgumentParser (int argc,
             	scheduled = true;
             } else if ((argument == "n")) {
                 scheduled = false;
-            } else {
-	        	cout << "[ERROR] : Invalid program argument: " << token << endl;
-	            ProgramHelp(name);
-	            exit(EXIT_FAILURE); 
-            }
+	    }
+	} else if (token == "-i") {
+	    parameters["ID"] = argument;
         } else {
-            cout << "[ERROR] : Invalid parameter: " << token << endl;
-            ProgramHelp(name);
-            exit(EXIT_FAILURE);
+	    cout << "[ERROR] : Invalid program argument: " << token << endl;
+	    ProgramHelp(name);
+	    exit(EXIT_FAILURE); 
         }
     }
     return parameters;
@@ -213,8 +214,8 @@ int main (int argc, char** argv) {
 
     cout << "\tCreating Distributed Energy Resource\n";
     // ~ reference DistributedEnergyResource and BatteryEnergyStorageSystem
-    DistributedEnergyResource* der_ptr 
-        = new DistributedEnergyResource(configs["DER"]);
+    WaterHeaterEmulator* der_ptr 
+        = new WaterHeaterEmulator(configs, stoul(arguments["ID"]));
 
     cout << "\tCreating Operator\n";
     // ~ reference Operator.h
@@ -296,7 +297,7 @@ int main (int argc, char** argv) {
     string region = "region" + to_string(rand() % 100) + "/";
     string substation = "substation" + to_string(rand() % 100) + "/";
     string feeder = "feeder" + to_string(rand() % 100) + "/";
-    path = path + region + substation + feeder + app;
+    path = path + region + substation + feeder + app + arguments["ID"];
     SmartGridDevice *sgd_ptr = new SmartGridDevice(der_ptr, 
                                                    bus_ptr, 
                                                    device_name, 

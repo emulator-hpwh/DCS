@@ -1,5 +1,7 @@
 #!/bin/bash
 
+num="$1"
+
 # setup environment
 export CPU=arm
 export OS=linux
@@ -16,4 +18,4 @@ export SRC=dcs
 make -C ../build
 
 # run
-./../build/bin/debug/$SRC -c ../data/config.ini -o n
+./../build/bin/debug/$SRC -c ../data/config.ini -o n -i $num
