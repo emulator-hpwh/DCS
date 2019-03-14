@@ -82,8 +82,8 @@ void DistributedEnergyResource::SetExportWatts (unsigned int power) {
 // Set Export Power
 // - regulates export power
 void DistributedEnergyResource::SetExportPower (float power) {
-    if (power > rated_export_power_) {
-        export_power_ = rated_export_power_;
+    if (power > export_watts_) {
+        export_power_ = export_watts_;
     } else if (power <= 0) {
         export_power_ = 0;
     } else {
@@ -136,8 +136,8 @@ void DistributedEnergyResource::SetImportWatts (unsigned int power) {
 // Set Import Power
 // - regulates import power
 void DistributedEnergyResource::SetImportPower (float power) {
-    if (power > rated_import_power_) {
-        import_power_ = rated_import_power_;
+    if (power > import_watts_) {
+        import_power_ = import_watts_;
     } else if (power <= 0) {
         import_power_ = 0;
     } else {
@@ -152,7 +152,7 @@ void DistributedEnergyResource::SetImportEnergy (float energy) {
         import_energy_ = rated_import_energy_;
     } else if (energy <= 0) {
         import_energy_ = 0;
-        import_watts_ = 0;  // stop importing
+        //import_watts_ = 0;  // stop importing
     } else {
         import_energy_ = energy;
     }
@@ -206,11 +206,10 @@ void DistributedEnergyResource::SetLogIncrement (unsigned int inc) {
     log_inc_ = inc;
 }  // end Set Log Increment
 
-// Get Rated Export Watts
-// - get the control watt value available to export to the grid
+//Get Export Watts
 unsigned int DistributedEnergyResource::GetExportWatts () {
-    return export_watts_;
-}  // end Get Rated Export Watts
+	return export_watts_;
+} // end Get Export Watts
 
 // Get Rated Export Power
 // - get the rated watt value available to export to the grid
@@ -220,9 +219,8 @@ unsigned int DistributedEnergyResource::GetRatedExportPower () {
 
 // Get Export Power
 // - get the watt value available to export to the grid
-unsigned int DistributedEnergyResource::GetExportPower () {
-    unsigned int power = export_power_;
-    return power;
+float DistributedEnergyResource::GetExportPower () {
+    return export_power_;
 }  // end Get Export Power
 
 // Get Rated Export Energy
@@ -233,9 +231,8 @@ unsigned int DistributedEnergyResource::GetRatedExportEnergy () {
 
 // Get Export Energy
 // - get the watt-hour value available to export to the grid
-unsigned int DistributedEnergyResource::GetExportEnergy () {
-    unsigned int energy = export_energy_;
-    return energy;
+float DistributedEnergyResource::GetExportEnergy () {
+    return export_energy_;
 }  // end Get Export Energy
 
 // Get Export Ramp
@@ -244,11 +241,10 @@ unsigned int DistributedEnergyResource::GetExportRamp () {
     return export_ramp_;
 }  // end Get Export Ramp
 
-// Get Rated Import Watts
-// - get the control watt value available to export to the grid
+// Get Import Watts
 unsigned int DistributedEnergyResource::GetImportWatts () {
-    return import_watts_;
-}  // end Get Rated Import Watts
+	return import_watts_;
+} // end Get Import Watts
 
 // Get Rated Import Power
 // - get the rated watt value available to import from the grid
@@ -258,9 +254,8 @@ unsigned int DistributedEnergyResource::GetRatedImportPower () {
 
 // Get Import Power
 // - get the watt value available to import from the grid
-unsigned int DistributedEnergyResource::GetImportPower () {
-    unsigned int power = import_power_;
-    return power;
+float DistributedEnergyResource::GetImportPower () {
+    return import_power_;
 }  // end Get Import Power
 
 // Get Rated Import Energy
@@ -271,9 +266,8 @@ unsigned int DistributedEnergyResource::GetRatedImportEnergy () {
 
 // Get Import Energy
 // - get the watt-hour value available to import from the grid
-unsigned int DistributedEnergyResource::GetImportEnergy () {
-    unsigned int energy = import_energy_;
-    return energy;
+float DistributedEnergyResource::GetImportEnergy () {
+    return import_energy_;
 }  // end Get Import Energy
 
 // Get Import Ramp
@@ -306,20 +300,6 @@ float DistributedEnergyResource::GetPrice () {
     return price_;
 }  // end Get Price
 
-// Get Log Inc
-unsigned int DistributedEnergyResource::GetLogInc () {
-    return log_inc_;
-}  // end Log Inc
-
-// Get Last UTC
-unsigned int DistributedEnergyResource::GetLastUTC () {
-    return last_utc_;
-}  // end Get Last UTC
-
-void DistributedEnergyResource::SetLastUTC (unsigned int utc) {
-    last_utc_ = utc;
-}  // end Set Last UTC
-
 // Import Power
 // - calculate power/energy change 
 // - degrement import energy and increment export energy
@@ -327,21 +307,12 @@ void DistributedEnergyResource::ImportPower () {
     // regulate import power
     float seconds = delta_time_ / 1000;
     float ramp_watts = import_ramp_ * seconds;
-    float power;
     if (import_power_ == import_watts_){
         // do nothing
     } else if (import_power_ < import_watts_) {
-        power = import_power_ + ramp_watts;
-        if (power > import_watts_) {
-            power = import_watts_;
-        }
-        DistributedEnergyResource::SetImportPower (power);
+        DistributedEnergyResource::SetImportPower (import_power_ + ramp_watts);
     } else if (import_power_ > import_watts_) {
-        power = import_power_ - ramp_watts;
-        if (power < import_watts_) {
-            power = import_watts_;
-        }
-        DistributedEnergyResource::SetImportPower (power);
+        DistributedEnergyResource::SetImportPower (import_watts_ - ramp_watts);
     }
 
     // regulate energy
@@ -372,21 +343,12 @@ void DistributedEnergyResource::ImportPower () {
 void DistributedEnergyResource::ExportPower () {
     float seconds = delta_time_ / 1000;
     float ramp_watts = export_ramp_ * seconds;
-    float power;
-    if (export_power_ == export_watts_){
+    if (export_power_ == export_watts_) {
         // do nothing
     } else if (export_power_ < export_watts_) {
-        power = export_power_ + ramp_watts;
-        if (power > export_watts_) {
-            power = export_watts_;
-        }
-        DistributedEnergyResource::SetExportPower (power);
+        DistributedEnergyResource::SetExportPower (export_power_ + ramp_watts);
     } else if (export_power_ > export_watts_) {
-        power = export_power_ - ramp_watts;
-        if (power < export_watts_) {
-            power = export_watts_;
-        }
-        DistributedEnergyResource::SetExportPower (power);
+        DistributedEnergyResource::SetExportPower (export_power_ - ramp_watts);
     }
 
     // regulate energy
@@ -421,6 +383,11 @@ void DistributedEnergyResource::IdleLoss () {
     DistributedEnergyResource::SetExportEnergy(export_energy_ - energy_loss);
 }  // end Idle Loss
 
+// Usage
+// This function should apply to the asset changing its energy state without
+// charging from or discharging to the grid. Needs to be overwritten based on asset.
+void DistributedEnergyResource::Usage () {};
+
 // Log
 // - log important physical attributes of DER on a frequency set by config file
 void DistributedEnergyResource::Log () {
@@ -448,6 +415,7 @@ void DistributedEnergyResource::Loop (float delta_time) {
         DistributedEnergyResource::ExportPower ();
     } else {
         IdleLoss ();
+	Usage ();
     }
     DistributedEnergyResource::Log ();
 }  // end Control
@@ -461,6 +429,5 @@ void DistributedEnergyResource::Display () {
         << "Import Energy:\t" << import_energy_ << "\twatt-hours\n"
         << "Export Power:\t" << export_power_ << "\twatts\n"
         << "Export Control:\t" << export_watts_ << "\twatts\n"
-        << "Export Energy:\t" << export_energy_ << "\twatt-hours\n" 
-        << "Power Price:\t" << price_ << "\tcents/watt-hours\n" << std::endl;
+        << "Export Energy:\t" << export_energy_ << "\twatt-hours" << std::endl;
 }  // end Display

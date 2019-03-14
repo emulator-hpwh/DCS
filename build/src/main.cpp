@@ -37,6 +37,7 @@
 #include <vector>
 #include <map>
 #include "include/DistributedEnergyResource.h"
+#include "include/HeatPumpEmulator.h"
 #include "include/WaterHeaterEmulator.h"
 #include "include/CommandLineInterface.h"
 #include "include/Operator.h"
@@ -60,7 +61,6 @@ static void ProgramHelp (const string& name) {
     	"\t[] means it has a default value\n"
     	"\t -h \t help\n"
     	"\t -c \t configuration filename" 
-	"\t -i \t ID number"
 		"\t -o \t enable operator"  << endl;
 }  // end Program Help
 
@@ -73,7 +73,6 @@ static std::map <std::string, std::string> ArgumentParser (int argc,
 
     // parse tokens
     map <string, string> parameters;
-    parameters["ID"] = 1;
     string token, argument;
 
     for (int i = 1; i < argc; i = i+2){
@@ -97,15 +96,15 @@ static std::map <std::string, std::string> ArgumentParser (int argc,
         } else if ((token == "-o")) {
             if ((argument == "y")) {
             	scheduled = true;
-            } else if ((argument == "n")) {
-                scheduled = false;
-	    }
-	} else if (token == "-i") {
-	    parameters["ID"] = argument;
+            } else {
+	        	cout << "[ERROR] : Invalid program argument: " << token << endl;
+	            ProgramHelp(name);
+	            exit(EXIT_FAILURE); 
+            }
         } else {
-	    cout << "[ERROR] : Invalid program argument: " << token << endl;
-	    ProgramHelp(name);
-	    exit(EXIT_FAILURE); 
+            cout << "[ERROR] : Invalid parameter: " << token << endl;
+            ProgramHelp(name);
+            exit(EXIT_FAILURE);
         }
     }
     return parameters;
@@ -178,7 +177,7 @@ void SmartGridDeviceLoop (unsigned int sleep, SmartGridDevice* sgd_ptr) {
     auto time_end = chrono::high_resolution_clock::now();
     chrono::duration<double, milli> time_elapsed;
 
-    while (!done) {
+    while (!done && scheduled) {
         time_start = chrono::high_resolution_clock::now();
         sgd_ptr->Loop();
         time_end = chrono::high_resolution_clock::now();
@@ -213,9 +212,10 @@ int main (int argc, char** argv) {
     tsu::config_map configs = tsu::MapConfigFile (arguments["config"]);
 
     cout << "\tCreating Distributed Energy Resource\n";
-    // ~ reference DistributedEnergyResource and BatteryEnergyStorageSystem
-    WaterHeaterEmulator* der_ptr 
-        = new WaterHeaterEmulator(configs, stoul(arguments["ID"]));
+    // ~ reference DistributedEnergyResource
+    HeatPumpEmulator* der_ptr 
+    	//= new DistributedEnergyResource(configs["DER"]);
+	= new HeatPumpEmulator(configs);
 
     cout << "\tCreating Operator\n";
     // ~ reference Operator.h
@@ -293,15 +293,11 @@ int main (int argc, char** argv) {
     cout << "\tCreating AllJoyn Smart Grid Device\n";
     // ~ reference SmartGridDevice.cpp
     const char* device_name = configs["AllJoyn"]["device_interface"].c_str();
-    string path = configs["AllJoyn"]["path"];
-    string region = "region" + to_string(rand() % 100) + "/";
-    string substation = "substation" + to_string(rand() % 100) + "/";
-    string feeder = "feeder" + to_string(rand() % 100) + "/";
-    path = path + region + substation + feeder + app + arguments["ID"];
+    const char* path = configs["AllJoyn"]["path"].c_str();
     SmartGridDevice *sgd_ptr = new SmartGridDevice(der_ptr, 
                                                    bus_ptr, 
                                                    device_name, 
-                                                   path.c_str());
+                                                   path);
 
     cout << "\t\tRegistering AllJoyn Smart Grid Device\n";
     if (ER_OK != bus_ptr->RegisterBusObject(*sgd_ptr)){

@@ -8,24 +8,25 @@
 
 class WaterHeaterEmulator: public DistributedEnergyResource {
 public:
-	WaterHeaterEmulator (tsu::config_map &config, unsigned int ID);
+	WaterHeaterEmulator (tsu::config_map &config);
 	virtual ~WaterHeaterEmulator ();
 
 public:
-	void Loop (float delta_time);
+	virtual void Loop (float delta_time);
 	void SetBypassImportWatts (float power);
 	void SetBypassImportPower (float power);
-	void SetNormalImportPower (float power);
 	void SetDeltaEnergy (float energy);
-	void SetImportEnergyFloat (float energy);
 	unsigned int GetBypassImportWatts ();
 	float GetBypassImportPower ();
-	float GetNormalImportPower ();
 	float GetDeltaEnergy ();
-	float GetImportEnergyFloat ();
 
-private:
-	void ImportPower (float delta_time);
+public:
+	unsigned int mains_temp_;
+	unsigned int temp_setpoint_;
+	unsigned int thermal_ramp_;
+
+public:
+	virtual void ImportPower (float delta_time);
 	void IdleLoss (float delta_time);
 	void Usage ();
 	void UsageLoss (float delta_time);
@@ -36,16 +37,11 @@ private:
 	std::string log_path_;
 	float delta_energy_;
 
-private:
+public:
 	tsu::string_matrix schedule_;
 	float bypass_import_power_;
-	float normal_import_power_;
 	unsigned int bypass_import_watts_;
-	unsigned int mains_temp_;
-	unsigned int temp_setpoint_;
-	unsigned int thermal_ramp_;
-	unsigned int ID_;
-	float import_energy_float_;
+
 };
 
 #endif // WATERHEATEREMULATOR_H_INCLUDED

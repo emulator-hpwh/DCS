@@ -30,11 +30,11 @@ class DistributedEnergyResource {
         void SetRatedExportPower (unsigned int watts);
         void SetRatedExportEnergy (unsigned int watt_hours);
         void SetExportRamp (unsigned int watts_per_second);
-        unsigned int GetExportWatts ();
+	unsigned int GetExportWatts ();
         unsigned int GetRatedExportPower ();
-        unsigned int GetExportPower ();
+        float GetExportPower ();
         unsigned int GetRatedExportEnergy ();
-        unsigned int GetExportEnergy ();
+        float GetExportEnergy ();
         unsigned int GetExportRamp ();
         // import
         void SetImportWatts (unsigned int power);
@@ -43,11 +43,11 @@ class DistributedEnergyResource {
         void SetRatedImportPower (unsigned int watts);
         void SetRatedImportEnergy (unsigned int watt_hours);
         void SetImportRamp (unsigned int watts_per_second);
-        unsigned int GetImportWatts ();
         unsigned int GetRatedImportPower ();
-        unsigned int GetImportPower ();
+	unsigned int GetImportWatts ();
+        float GetImportPower ();
         unsigned int GetRatedImportEnergy ();
-        unsigned int GetImportEnergy ();
+        float GetImportEnergy ();
         unsigned int GetImportRamp ();
         // idle
         void SetIdleLosses (unsigned int energy_per_hour);
@@ -60,16 +60,14 @@ class DistributedEnergyResource {
         // logging
         void SetLogPath (std::string path);
         void SetLogIncrement (unsigned int inc);
-        void SetLastUTC (unsigned int utc);
         std::string GetLogPath ();
-	unsigned int GetLastUTC ();
-	unsigned int GetLogInc ();
 
     private:
         // controls
         virtual void ImportPower ();
         virtual void ExportPower ();
         virtual void IdleLoss ();
+	virtual void Usage ();
         virtual void Log ();
 
     private:       
