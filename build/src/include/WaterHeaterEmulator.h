@@ -24,7 +24,7 @@ public:
 	float GetDeltaEnergy ();
 	float GetImportEnergyFloat ();
 
-private:
+public:
 	void ImportPower (float delta_time);
 	void IdleLoss (float delta_time);
 	void Usage ();

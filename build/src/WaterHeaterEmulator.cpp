@@ -204,7 +204,8 @@ void WaterHeaterEmulator::Usage () {
 		if (time_formatted == schedule_[i][0]) {
 			import_energy = WaterHeaterEmulator::GetImportEnergyFloat ();
 			tank_temp = temp_setpoint_ - import_energy/100;
-			delta_energy = stof(schedule_[i][1])*(tank_temp - mains_temp_)*2.44;
+			//modify energy loss for heat pump
+			delta_energy = stof(schedule_[i][1])*(tank_temp - mains_temp_)*2.44*0.5;
 			//SetImportEnergy(import_energy + delta_energy);
 			WaterHeaterEmulator::SetDeltaEnergy (old_delta_energy + delta_energy);
 		}

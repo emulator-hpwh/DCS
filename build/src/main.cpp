@@ -38,6 +38,7 @@
 #include <map>
 #include "include/DistributedEnergyResource.h"
 #include "include/WaterHeaterEmulator.h"
+#include "include/HeatPumpEmulator.h"
 #include "include/CommandLineInterface.h"
 #include "include/Operator.h"
 #include "include/SmartGridDevice.h"
@@ -214,8 +215,8 @@ int main (int argc, char** argv) {
 
     cout << "\tCreating Distributed Energy Resource\n";
     // ~ reference DistributedEnergyResource and BatteryEnergyStorageSystem
-    WaterHeaterEmulator* der_ptr 
-        = new WaterHeaterEmulator(configs, stoul(arguments["ID"]));
+    HeatPumpEmulator* der_ptr 
+        = new HeatPumpEmulator(configs, stoul(arguments["ID"]));
 
     cout << "\tCreating Operator\n";
     // ~ reference Operator.h
