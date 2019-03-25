@@ -23,7 +23,7 @@ WaterHeaterEmulator::WaterHeaterEmulator (tsu::config_map &config, unsigned int 
 	//std::binomial_distribution<> d(4,0.5);
 	//int size;
 	//size = d(gen) +1;
-	
+	/*
 	float rn = float(rand())/RAND_MAX;
 	int size;
 	if (rn <= 0.133) {
@@ -37,7 +37,9 @@ WaterHeaterEmulator::WaterHeaterEmulator (tsu::config_map &config, unsigned int 
 	} else {
 		size = 5;
 	}
+	*/
 
+	int size = 3;
 	//Read schedule and shuffle volumes column
 	if (size == 1) {
 		schedule_ = tsu::FileToMatrix("../data/1bed.csv", ',' ,2);
@@ -51,7 +53,7 @@ WaterHeaterEmulator::WaterHeaterEmulator (tsu::config_map &config, unsigned int 
 		schedule_ = tsu::FileToMatrix("../data/5bed.csv", ',' ,2);
 	}
 
-	
+	/*
 	//Normal distribution of event times and volumes
 	time_t utc = time(0);
 	tm now = *localtime(&utc);
@@ -84,7 +86,8 @@ WaterHeaterEmulator::WaterHeaterEmulator (tsu::config_map &config, unsigned int 
 		}
 		schedule_[i].at(1) = std::to_string(event_vol);
 	}			
-
+	*/
+	
 	//Setting member properties for WHs *I will probably remove/replace this*
 	SetRatedImportPower(stoul(config["EWH"]["rated_import_power"]));
 	SetRatedImportEnergy(3630);
@@ -205,7 +208,7 @@ void WaterHeaterEmulator::Usage () {
 			import_energy = WaterHeaterEmulator::GetImportEnergyFloat ();
 			tank_temp = temp_setpoint_ - import_energy/100;
 			//modify energy loss for heat pump
-			delta_energy = stof(schedule_[i][1])*(tank_temp - mains_temp_)*2.44*0.5;
+			delta_energy = stof(schedule_[i][1])*(tank_temp - mains_temp_)*2.44*0.25;
 			//SetImportEnergy(import_energy + delta_energy);
 			WaterHeaterEmulator::SetDeltaEnergy (old_delta_energy + delta_energy);
 		}
