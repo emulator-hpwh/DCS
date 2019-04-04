@@ -14,6 +14,7 @@
 HeatPumpEmulator::HeatPumpEmulator (tsu::config_map &config, unsigned int ID) :
 	WaterHeaterEmulator (config, ID) {
 	SetBypassImportWatts (0);
+	heat_pump_delay_timer_ = 0;
 };
 
 HeatPumpEmulator::~HeatPumpEmulator () {};
@@ -49,6 +50,7 @@ void HeatPumpEmulator::Loop (float delta_time) {
 		HeatPumpEmulator::ImportPower (delta_time);
 	} else {
 		IdleLoss (delta_time);
+		heat_pump_delay_timer_ = 0;
 	}
 	Usage ();
 	UsageLoss (delta_time);
@@ -64,33 +66,50 @@ void HeatPumpEmulator::ImportPower (float delta_time) {
 	unsigned int bypass_watts = GetBypassImportWatts ();
 	unsigned int element_power = 4500;
 	float heat_pump_output = 1083;
+	heat_pump_delay_timer_ = heat_pump_delay_timer_ + seconds;
 	
 	if (bypass_watts > 0 && import_watts == 0) {
-		SetBypassImportPower (bypass_watts);
-		if (GetBypassImportPower () < element_power) {
-			delta_energy = heat_pump_output * hours;
+		if (bypass_watts < element_power) {
+			if (heat_pump_delay_timer_ > 60) {
+				SetBypassImportPower (bypass_watts);
+				delta_energy = heat_pump_output * hours;
+			} else {
+				SetBypassImportPower (0);
+				delta_energy = 0;
+			}
 		} else {
-			delta_energy = (element_power + heat_pump_output)*hours;
+			if (heat_pump_delay_timer_ > 60) {
+				SetBypassImportPower (bypass_watts);
+				delta_energy = (element_power + heat_pump_output) * hours;
+			} else {
+				SetBypassImportPower (element_power);
+				delta_energy = element_power * hours;
+			}
 		}
-		SetImportEnergy (import_energy - delta_energy);
-		SetImportEnergyFloat (import_energy - delta_energy);
-		SetImportPower( GetBypassImportPower ());
+		SetImportPower(GetBypassImportPower ());
+
 	} else if (import_watts > 0) {
-		SetBypassImportPower (bypass_watts);
 		if (import_energy > 1575) {
-			SetImportPower (element_power
-				+ HeatPumpEmulator::HeatPumpPower(import_energy));
-			delta_energy = (element_power + heat_pump_output)*hours;
+			if (heat_pump_delay_timer_ > 60) {			
+				SetImportPower (element_power
+					+ HeatPumpEmulator::HeatPumpPower(import_energy));
+				delta_energy = (element_power + heat_pump_output)*hours;
+			} else {
+				SetImportPower (element_power);
+				delta_energy = element_power * hours;
+			}
 		} else if (import_energy < 1575 && import_energy > 50) {
-			SetImportPower (HeatPumpEmulator::HeatPumpPower (import_energy));
-			delta_energy = heat_pump_output*hours;
+			if (heat_pump_delay_timer_ > 60) {
+				SetImportPower (HeatPumpEmulator::HeatPumpPower (import_energy));
+				delta_energy = heat_pump_output*hours;
+			} else {
+			}
 		} else if (import_energy < 50 && GetImportPower () > 0) {
 			SetImportPower (HeatPumpEmulator::HeatPumpPower (import_energy));
 			delta_energy = heat_pump_output*hours;
 		}
-		SetImportEnergy (import_energy - delta_energy);
-		SetImportEnergyFloat (import_energy - delta_energy);
 	}
-	
-};
 
+	SetImportEnergy (import_energy - delta_energy);
+	SetImportEnergyFloat (import_energy - delta_energy);
+};

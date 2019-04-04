@@ -17,6 +17,7 @@ public:
 
 private:
 	float HeatPumpPower (float import_energy);
+	float heat_pump_delay_timer_;
 };
 
 #endif // HEATPUMPEMULATOR_H_INCLUDED
